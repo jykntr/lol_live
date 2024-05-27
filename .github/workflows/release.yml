@@ -1,0 +1,49 @@
+on:
+  release:
+    types:
+      - created
+
+name: Build and Release
+
+jobs:
+  build:
+    name: Build and Release
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Rust cache setup
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        shell: bash
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload binaries to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp target/${{ matrix.target }}/release/lol_live${{ contains(matrix.target, 'windows') &&  '.exe' || '' }} lol_live-${{ matrix.target }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}
+          gh release upload ${{ github.event.release.tag_name }} lol_live-${{ matrix.target }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}
