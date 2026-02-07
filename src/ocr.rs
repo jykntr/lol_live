@@ -1,10 +1,25 @@
 use image::GrayImage;
 use leptess::{LepTess, Variable};
 use std::io::Cursor;
+use std::path::PathBuf;
 
-/// Try to initialize Tesseract. Returns None if Tesseract is not installed.
+const ENG_TRAINEDDATA: &[u8] = include_bytes!("../tessdata/eng.traineddata");
+
+/// Write the embedded traineddata to a temp directory and return its path.
+fn prepare_tessdata() -> Option<PathBuf> {
+    let dir = std::env::temp_dir().join("lol_live_tessdata");
+    std::fs::create_dir_all(&dir).ok()?;
+    let file_path = dir.join("eng.traineddata");
+    if !file_path.exists() {
+        std::fs::write(&file_path, ENG_TRAINEDDATA).ok()?;
+    }
+    Some(dir)
+}
+
+/// Try to initialize Tesseract. Returns None if initialization fails.
 pub fn init_tesseract() -> Option<LepTess> {
-    let mut lt = LepTess::new(None, "eng").ok()?;
+    let tessdata_dir = prepare_tessdata()?;
+    let mut lt = LepTess::new(Some(tessdata_dir.to_str()?), "eng").ok()?;
     let _ = lt.set_variable(Variable::TesseditCharWhitelist, "0123456789");
     let _ = lt.set_variable(Variable::TesseditPagesegMode, "7");
     Some(lt)
