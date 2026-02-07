@@ -33,16 +33,8 @@ jobs:
         with:
           target: ${{ matrix.target }}
 
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: brew install tesseract leptonica
-
-      - name: Install system dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          vcpkg install tesseract:x64-windows
-          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
-        shell: bash
+      - name: Install dependencies
+        uses: ./.github/actions/setup-deps
 
       - name: Rust cache setup
         uses: Swatinem/rust-cache@v2
