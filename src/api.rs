@@ -13,9 +13,7 @@ pub async fn poll_game_data(client: &reqwest::Client) -> Option<ApiData> {
 
     let json: serde_json::Value = response.json().await.ok()?;
 
-    let summoner_name = json["activePlayer"]["summonerName"]
-        .as_str()?
-        .to_string();
+    let summoner_name = json["activePlayer"]["summonerName"].as_str()?.to_string();
 
     let game_time = json["gameData"]["gameTime"].as_f64()?;
 

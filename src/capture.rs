@@ -11,8 +11,12 @@ pub fn capture_screen() -> Result<(u32, u32, RgbaImage), String> {
         .or_else(|| Monitor::all().ok()?.into_iter().next())
         .ok_or_else(|| "No monitors found".to_string())?;
 
-    let width = monitor.width().map_err(|e| format!("Failed to get width: {e}"))?;
-    let height = monitor.height().map_err(|e| format!("Failed to get height: {e}"))?;
+    let width = monitor
+        .width()
+        .map_err(|e| format!("Failed to get width: {e}"))?;
+    let height = monitor
+        .height()
+        .map_err(|e| format!("Failed to get height: {e}"))?;
 
     let img = monitor
         .capture_image()
@@ -23,8 +27,8 @@ pub fn capture_screen() -> Result<(u32, u32, RgbaImage), String> {
 
 /// Crop the CS region from a full screenshot and convert to grayscale.
 pub fn crop_cs_region(img: &RgbaImage, region: &CsRegion) -> GrayImage {
-    let cropped = image::imageops::crop_imm(img, region.x, region.y, region.width, region.height)
-        .to_image();
+    let cropped =
+        image::imageops::crop_imm(img, region.x, region.y, region.width, region.height).to_image();
 
     let gray = image::DynamicImage::ImageRgba8(cropped).into_luma8();
     gray
