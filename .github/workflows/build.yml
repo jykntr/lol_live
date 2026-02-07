@@ -102,14 +102,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup vcpkg
+      - name: Cache vcpkg packages (Windows)
         if: runner.os == 'Windows'
-        uses: lukka/run-vcpkg@v11
+        uses: actions/cache@v4
         with:
-          vcpkgGitCommitId: '66c0373dc7fca549e5803087b9487edfe3aca0a1'
-          runVcpkgInstall: true
-        env:
-          VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}/installed
+          key: vcpkg-x64-windows-static-md-${{ hashFiles('vcpkg.json') }}
+
+      - name: Install vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          vcpkg install leptonica:x64-windows-static-md tesseract:x64-windows-static-md
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
 
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
