@@ -114,7 +114,8 @@ jobs:
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          vcpkg install tesseract:x64-windows
+          vcpkg install leptonica:x64-windows-static-md
+          vcpkg install tesseract:x64-windows-static-md
           echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
         shell: bash
 
