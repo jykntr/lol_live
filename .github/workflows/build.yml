@@ -107,6 +107,9 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: '66c0373dc7fca549e5803087b9487edfe3aca0a1'
+          runVcpkgInstall: true
+        env:
+          VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
 
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
