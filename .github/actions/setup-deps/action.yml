@@ -31,10 +31,10 @@ runs:
       run: brew install tesseract leptonica
       shell: bash
 
-    - name: Install system dependencies (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        vcpkg install leptonica:x64-windows-static-md
-        vcpkg install tesseract:x64-windows-static-md
-        echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
-      shell: bash
+#    - name: Install system dependencies (Windows)
+#      if: runner.os == 'Windows'
+#      run: |
+#        vcpkg install leptonica:x64-windows-static-md
+#        vcpkg install tesseract:x64-windows-static-md
+#        echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+#      shell: bash
