@@ -102,6 +102,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup vcpkg
+        if: runner.os == 'Windows'
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '66c0373dc7fca549e5803087b9487edfe3aca0a1'
+
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -112,12 +118,6 @@ jobs:
 
       - name: Rust cache setup
         uses: Swatinem/rust-cache@v2
-
-      - name: Setup vcpkg
-        if: runner.os == 'Windows'
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: '66c0373dc7fca549e5803087b9487edfe3aca0a1'
 
       - name: Build
         shell: bash
