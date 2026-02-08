@@ -39,7 +39,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          vcpkg install leptonica:x64-windows-static-md tesseract:x64-windows-static-md
+          vcpkg install --classic leptonica:x64-windows-static-md tesseract:x64-windows-static-md
           echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
 
       - name: Setup toolchain
