@@ -49,7 +49,8 @@ fn preprocess(img: &GrayImage) -> GrayImage {
 
 /// Run OCR on a grayscale image and return the parsed CS value.
 /// Returns None if confidence is too low or the result isn't a valid number.
-pub fn read_cs(lt: &mut LepTess, img: &GrayImage) -> Option<i64> {
+/// When `debug` is true, saves diagnostic images and logs OCR internals to stderr.
+pub fn read_cs(lt: &mut LepTess, img: &GrayImage, debug: bool) -> Option<i64> {
     let processed = preprocess(img);
 
     // Encode as PNG bytes
@@ -61,15 +62,39 @@ pub fn read_cs(lt: &mut LepTess, img: &GrayImage) -> Option<i64> {
     lt.set_image_from_mem(&buf).ok()?;
 
     let confidence = lt.mean_text_conf();
-    if confidence < 50 {
-        return None;
-    }
-
     let text = lt.get_utf8_text().ok()?;
     let trimmed = text.trim();
-    if trimmed.is_empty() {
-        return None;
+
+    if debug {
+        let parsed: Option<i64> = if !trimmed.is_empty() {
+            trimmed.parse().ok()
+        } else {
+            None
+        };
+        eprintln!(
+            "[OCR] Raw text: {:?} | Confidence: {} | Parsed: {:?}",
+            trimmed, confidence, parsed
+        );
     }
 
-    trimmed.parse::<i64>().ok()
+    let result = if confidence < 50 || trimmed.is_empty() {
+        None
+    } else {
+        trimmed.parse::<i64>().ok()
+    };
+
+    if debug && result.is_none() {
+        eprintln!(
+            "[OCR low confidence        ] Raw text: {:?} | Confidence: {}",
+            trimmed, confidence
+        );
+        if let Err(e) = img.save("debug_cs_crop.png") {
+            eprintln!("[OCR] Failed to save debug_cs_crop.png: {e}");
+        }
+        if let Err(e) = processed.save("debug_cs_preprocessed.png") {
+            eprintln!("[OCR] Failed to save debug_cs_preprocessed.png: {e}");
+        }
+    }
+
+    result
 }

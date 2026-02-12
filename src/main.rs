@@ -1,5 +1,6 @@
 mod api;
 mod capture;
+mod config;
 mod detect;
 mod ocr;
 mod types;
@@ -10,6 +11,11 @@ use types::ApiData;
 
 #[tokio::main]
 async fn main() {
+    let debug = std::env::args().any(|arg| arg == "--debug");
+    if debug {
+        eprintln!("[OCR] Debug mode enabled");
+    }
+
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
         .build()
@@ -18,6 +24,13 @@ async fn main() {
     // Channels
     let (api_tx, api_rx) = watch::channel::<Option<ApiData>>(None);
     let (ocr_tx, ocr_rx) = watch::channel::<Option<i64>>(None);
+
+    // Load League config (HUD scale, resolution, etc.)
+    let league_config = config::load();
+    if debug {
+        eprintln!("[OCR] League config: {league_config}");
+    }
+    let hud_scale = league_config.hud_scale;
 
     // Try to init OCR
     let ocr_available = match ocr::init_tesseract() {
@@ -41,6 +54,7 @@ async fn main() {
     });
 
     // OCR loop (1s) - only if Tesseract is available
+    let ocr_api_rx = api_rx.clone();
     let ocr_handle = if ocr_available {
         Some(tokio::task::spawn_blocking(move || {
             let mut lt = match ocr::init_tesseract() {
@@ -48,41 +62,92 @@ async fn main() {
                 None => return,
             };
 
-            // Do an initial capture to detect resolution and CS region
-            let (screen_w, screen_h) = match capture::capture_screen() {
-                Ok((w, h, _)) => {
-                    eprintln!("[OCR] Screen resolution: {}x{}", w, h);
-                    (w, h)
-                }
-                Err(e) => {
-                    eprintln!("[OCR] Initial screen capture failed: {e}");
-                    return;
-                }
-            };
-
-            let hud_scale = 1.0;
-            let region = detect::detect_cs_region(screen_w, screen_h, hud_scale);
-            eprintln!(
-                "[OCR] CS region: x={}, y={}, w={}, h={}",
-                region.x, region.y, region.width, region.height
-            );
+            let mut game_active = false;
 
             loop {
-                match capture::capture_screen() {
-                    Ok((_, _, img)) => {
-                        let gray = capture::crop_cs_region(&img, &region);
-                        let cs = ocr::read_cs(&mut lt, &gray);
-                        if let Some(cs_val) = cs {
-                            if detect::is_valid_cs(cs_val) {
-                                let _ = ocr_tx.send(Some(cs_val));
-                            }
+                // Wait for game to start
+                if !game_active {
+                    eprintln!("[OCR] Waiting for game to start...");
+                    loop {
+                        if ocr_api_rx
+                            .borrow()
+                            .as_ref()
+                            .is_some_and(|d| d.game_time > 0.0)
+                        {
+                            break;
                         }
+                        std::thread::sleep(Duration::from_secs(1));
+                    }
+                    eprintln!("[OCR] Game detected, starting OCR captures");
+                    game_active = true;
+                }
+
+                // Do an initial capture to detect resolution and CS region
+                let (screen_w, screen_h) = match capture::capture_screen() {
+                    Ok((w, h, _)) => {
+                        eprintln!("[OCR] Screen resolution: {}x{}", w, h);
+                        (w, h)
                     }
                     Err(e) => {
-                        eprintln!("[OCR] Screen capture failed: {e}");
+                        eprintln!("[OCR] Initial screen capture failed: {e}");
+                        std::thread::sleep(Duration::from_secs(1));
+                        continue;
                     }
+                };
+
+                let region = detect::detect_cs_region(screen_w, screen_h, hud_scale);
+                eprintln!(
+                    "[OCR] CS region: x={}, y={}, w={}, h={}",
+                    region.x, region.y, region.width, region.height
+                );
+
+                const DEBUG_SCREENSHOT_MAX: u64 = 100;
+                let mut screenshot_index: u64 = 0;
+                let mut last_ocr_ok = true;
+
+                // Capture loop — runs while game is active
+                loop {
+                    // Check if game ended or not yet started (gameTime <= 0)
+                    if !ocr_api_rx
+                        .borrow()
+                        .as_ref()
+                        .is_some_and(|d| d.game_time > 0.0)
+                    {
+                        eprintln!("[OCR] Game ended or not active, pausing OCR captures");
+                        game_active = false;
+                        break;
+                    }
+
+                    match capture::capture_screen() {
+                        Ok((_, _, img)) => {
+                            let gray = capture::crop_cs_region(&img, &region);
+                            let cs = ocr::read_cs(&mut lt, &gray, debug);
+                            if let Some(cs_val) = cs {
+                                if detect::is_valid_cs(cs_val) {
+                                    let _ = ocr_tx.send(Some(cs_val));
+                                }
+                                last_ocr_ok = true;
+                            } else {
+                                if debug
+                                    && last_ocr_ok
+                                    && screenshot_index < DEBUG_SCREENSHOT_MAX
+                                {
+                                    let path = format!(
+                                        "debug_screenshot_{screenshot_index}.png"
+                                    );
+                                    capture::save_screenshot(&img, &path, &region);
+                                    eprintln!("[OCR] Saved screenshot to {path}");
+                                    screenshot_index += 1;
+                                }
+                                last_ocr_ok = false;
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("[OCR] Screen capture failed: {e}");
+                        }
+                    }
+                    std::thread::sleep(Duration::from_secs(1));
                 }
-                std::thread::sleep(Duration::from_secs(1));
             }
         }))
     } else {
