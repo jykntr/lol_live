@@ -10,5 +10,4 @@ pub struct CsRegion {
 pub struct ApiData {
     pub game_time: f64,
     pub cs: i64,
-    pub summoner_name: String,
 }

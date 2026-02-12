@@ -21,11 +21,7 @@ pub async fn poll_game_data(client: &reqwest::Client) -> Option<ApiData> {
     for player in players {
         if player["summonerName"].as_str() == Some(&summoner_name) {
             let cs = player["scores"]["creepScore"].as_i64()?;
-            return Some(ApiData {
-                game_time,
-                cs,
-                summoner_name,
-            });
+            return Some(ApiData { game_time, cs });
         }
     }
 
