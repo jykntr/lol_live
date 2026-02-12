@@ -33,9 +33,10 @@ fn config_path() -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     {
         let home = std::env::var("HOME").ok()?;
-        Some(PathBuf::from(home).join(
-            "Library/Application Support/Riot Games/League of Legends/Config/game.cfg",
-        ))
+        Some(
+            PathBuf::from(home)
+                .join("Library/Application Support/Riot Games/League of Legends/Config/game.cfg"),
+        )
     }
 
     #[cfg(target_os = "windows")]

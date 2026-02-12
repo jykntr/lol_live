@@ -128,13 +128,8 @@ async fn main() {
                                 }
                                 last_ocr_ok = true;
                             } else {
-                                if debug
-                                    && last_ocr_ok
-                                    && screenshot_index < DEBUG_SCREENSHOT_MAX
-                                {
-                                    let path = format!(
-                                        "debug_screenshot_{screenshot_index}.png"
-                                    );
+                                if debug && last_ocr_ok && screenshot_index < DEBUG_SCREENSHOT_MAX {
+                                    let path = format!("debug_screenshot_{screenshot_index}.png");
                                     capture::save_screenshot(&img, &path, &region);
                                     eprintln!("[OCR] Saved screenshot to {path}");
                                     screenshot_index += 1;
