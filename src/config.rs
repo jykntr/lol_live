@@ -32,18 +32,26 @@ impl std::fmt::Display for LeagueConfig {
 fn config_path() -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     {
-        let home = std::env::var("HOME").ok()?;
-        Some(
-            PathBuf::from(home)
-                .join("Library/Application Support/Riot Games/League of Legends/Config/game.cfg"),
-        )
+        let app_path = PathBuf::from("/Applications/League of Legends.app/Contents/LoL/Config/game.cfg");
+        if app_path.exists() {
+            return Some(app_path);
+        }
+        let data_path = dirs::data_dir()?
+            .join("Riot Games/League of Legends/Config/game.cfg");
+        Some(data_path)
     }
 
     #[cfg(target_os = "windows")]
     {
-        Some(PathBuf::from(
-            r"C:\Riot Games\League of Legends\Config\game.cfg",
-        ))
+        use winreg::enums::HKEY_LOCAL_MACHINE;
+        use winreg::RegKey;
+
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let subkey = hklm
+            .open_subkey(r"SOFTWARE\WOW6432Node\Riot Games, Inc\League of Legends")
+            .ok()?;
+        let location: String = subkey.get_value("Location").ok()?;
+        Some(PathBuf::from(location).join("Config").join("game.cfg"))
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -52,10 +60,10 @@ fn config_path() -> Option<PathBuf> {
     }
 }
 
-pub fn load() -> LeagueConfig {
+pub fn load(override_path: Option<&PathBuf>) -> LeagueConfig {
     let mut config = LeagueConfig::default();
 
-    let path = match config_path() {
+    let path = match override_path.cloned().or_else(config_path) {
         Some(p) => p,
         None => return config,
     };

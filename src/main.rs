@@ -5,13 +5,28 @@ mod detect;
 mod ocr;
 mod types;
 
+use clap::Parser;
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::watch;
 use types::ApiData;
 
+#[derive(Parser)]
+#[command(about = "Real-time League of Legends CS tracker")]
+struct Args {
+    /// Enable debug mode (saves diagnostic screenshots and OCR output)
+    #[arg(long)]
+    debug: bool,
+
+    /// Path to League of Legends game.cfg config file
+    #[arg(short = 'c', long = "game-config")]
+    game_config: Option<PathBuf>,
+}
+
 #[tokio::main]
 async fn main() {
-    let debug = std::env::args().any(|arg| arg == "--debug");
+    let args = Args::parse();
+    let debug = args.debug;
     if debug {
         eprintln!("[OCR] Debug mode enabled");
     }
@@ -26,7 +41,7 @@ async fn main() {
     let (ocr_tx, ocr_rx) = watch::channel::<Option<i64>>(None);
 
     // Load League config (HUD scale, resolution, etc.)
-    let league_config = config::load();
+    let league_config = config::load(args.game_config.as_ref());
     if debug {
         eprintln!("[OCR] League config: {league_config}");
     }
