@@ -1,20 +1,22 @@
 use crate::types::CsRegion;
 
-/// Calculate the CS counter region based on screen dimensions and HUD scale.
+/// Calculate the CS counter region based on screen dimensions.
 ///
-/// At 1920x1080 with default HUD scale, the CS counter is roughly at
-/// (screen_width - 138, 5) with size (30, 20). We scale proportionally
-/// for other resolutions.
-pub fn detect_cs_region(screen_width: u32, screen_height: u32, hud_scale: f64) -> CsRegion {
+/// The CS counter sits in League's top scoreboard, which scales with game
+/// resolution but NOT with the HUD GlobalScale setting. At 1920x1080 the
+/// CS
+/// number text starts roughly 143 pixels from the right edge at y=3.
+/// The region is sized to capture up to 3-digit CS values.
+pub fn detect_cs_region(screen_width: u32, screen_height: u32, _hud_scale: f64) -> CsRegion {
     let base_width: f64 = 1920.0;
     let base_height: f64 = 1080.0;
 
-    let scale_x = (screen_width as f64 / base_width) * hud_scale;
-    let scale_y = (screen_height as f64 / base_height) * hud_scale;
+    let scale_x = screen_width as f64 / base_width;
+    let scale_y = screen_height as f64 / base_height;
 
-    let x = screen_width as f64 - (138.0 * scale_x);
-    let y = 5.0 * scale_y;
-    let width = 30.0 * scale_x;
+    let x = screen_width as f64 - (143.0 * scale_x);
+    let y = 3.0 * scale_y;
+    let width = 50.0 * scale_x;
     let height = 20.0 * scale_y;
 
     CsRegion {

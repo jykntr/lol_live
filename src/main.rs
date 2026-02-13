@@ -46,6 +46,7 @@ async fn main() {
         eprintln!("[OCR] League config: {league_config}");
     }
     let hud_scale = league_config.hud_scale;
+    let window_mode = league_config.window_mode;
 
     // Try to init OCR
     let ocr_available = match ocr::init_tesseract() {
@@ -144,7 +145,7 @@ async fn main() {
                                 last_ocr_ok = true;
                             } else {
                                 if debug && last_ocr_ok && screenshot_index < DEBUG_SCREENSHOT_MAX {
-                                    let path = format!("debug_screenshot_{screenshot_index}.png");
+                                    let path = format!("debug_screenshot_res_{screen_w}x{screen_h}_wm_{window_mode}_{screenshot_index}.png");
                                     capture::save_screenshot(&img, &path, &region);
                                     eprintln!("[OCR] Saved screenshot to {path}");
                                     screenshot_index += 1;

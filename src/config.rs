@@ -32,12 +32,12 @@ impl std::fmt::Display for LeagueConfig {
 fn config_path() -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     {
-        let app_path = PathBuf::from("/Applications/League of Legends.app/Contents/LoL/Config/game.cfg");
+        let app_path =
+            PathBuf::from("/Applications/League of Legends.app/Contents/LoL/Config/game.cfg");
         if app_path.exists() {
             return Some(app_path);
         }
-        let data_path = dirs::data_dir()?
-            .join("Riot Games/League of Legends/Config/game.cfg");
+        let data_path = dirs::data_dir()?.join("Riot Games/League of Legends/Config/game.cfg");
         Some(data_path)
     }
 
