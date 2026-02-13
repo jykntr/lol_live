@@ -1,11 +1,5 @@
-mod api;
-mod capture;
-mod config;
-mod detect;
-mod ocr;
-mod types;
-
 use clap::Parser;
+use lol_live::{api, capture, config, detect, ocr, types};
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::watch;
