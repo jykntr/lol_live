@@ -18,6 +18,10 @@ struct Args {
     #[arg(long)]
     debug: bool,
 
+    /// Record screenshots for building an OCR test suite, optionally to a directory
+    #[arg(long, num_args = 0..=1, default_missing_value = ".")]
+    record: Option<PathBuf>,
+
     /// Path to League of Legends game.cfg config file
     #[arg(short = 'c', long = "game-config")]
     game_config: Option<PathBuf>,
@@ -27,8 +31,18 @@ struct Args {
 async fn main() {
     let args = Args::parse();
     let debug = args.debug;
+    let record_dir = args.record;
     if debug {
         eprintln!("[OCR] Debug mode enabled");
+    }
+    if let Some(ref dir) = record_dir {
+        eprintln!(
+            "[record] Recording mode enabled, saving to {}",
+            dir.display()
+        );
+        if !dir.exists() {
+            std::fs::create_dir_all(dir).expect("Failed to create record directory");
+        }
     }
 
     let client = reqwest::Client::builder()
@@ -121,6 +135,10 @@ async fn main() {
                 let mut screenshot_index: u64 = 0;
                 let mut last_ocr_ok = true;
 
+                // Record mode state
+                let mut last_recorded_cs: Option<i64> = None;
+                let mut record_fail_index: u64 = 0;
+
                 // Capture loop — runs while game is active
                 loop {
                     // Check if game ended or not yet started (gameTime <= 0)
@@ -141,15 +159,59 @@ async fn main() {
                             if let Some(cs_val) = cs {
                                 if detect::is_valid_cs(cs_val) {
                                     let _ = ocr_tx.send(Some(cs_val));
+
+                                    // Record: save on first successful parse of a new CS value
+                                    if let Some(ref dir) = record_dir {
+                                        if last_recorded_cs.is_none()
+                                            || cs_val > last_recorded_cs.unwrap()
+                                        {
+                                            let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_cs_{cs_val}.png"));
+                                            if let Err(e) = img.save(&path) {
+                                                eprintln!(
+                                                    "[record] Failed to save {}: {e}",
+                                                    path.display()
+                                                );
+                                            } else {
+                                                eprintln!("[record] Saved {}", path.display());
+                                            }
+                                            last_recorded_cs = Some(cs_val);
+                                        }
+                                    }
                                 }
                                 last_ocr_ok = true;
                             } else {
                                 if debug && last_ocr_ok && screenshot_index < DEBUG_SCREENSHOT_MAX {
-                                    let path = format!("debug_screenshot_res_{screen_w}x{screen_h}_wm_{window_mode}_{screenshot_index}.png");
-                                    capture::save_screenshot(&img, &path, &region);
-                                    eprintln!("[OCR] Saved screenshot to {path}");
+                                    let base = format!("debug_screenshot_res_{screen_w}x{screen_h}_wm_{window_mode}_{screenshot_index}");
+                                    let annotated = format!("{base}.png");
+                                    capture::save_screenshot(&img, &annotated, &region);
+                                    eprintln!("[OCR] Saved screenshot to {annotated}");
+                                    let raw = format!("{base}_raw.png");
+                                    if let Err(e) = img.save(&raw) {
+                                        eprintln!(
+                                            "[OCR] Failed to save raw screenshot to {raw}: {e}"
+                                        );
+                                    } else {
+                                        eprintln!("[OCR] Saved raw screenshot to {raw}");
+                                    }
                                     screenshot_index += 1;
                                 }
+
+                                // Record: save on first failure after a success
+                                if let Some(ref dir) = record_dir {
+                                    if last_ocr_ok {
+                                        let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_fail_{record_fail_index}.png"));
+                                        if let Err(e) = img.save(&path) {
+                                            eprintln!(
+                                                "[record] Failed to save {}: {e}",
+                                                path.display()
+                                            );
+                                        } else {
+                                            eprintln!("[record] Saved {}", path.display());
+                                        }
+                                        record_fail_index += 1;
+                                    }
+                                }
+
                                 last_ocr_ok = false;
                             }
                         }

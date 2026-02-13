@@ -29,9 +29,10 @@ pub fn init_tesseract() -> Option<LepTess> {
 fn preprocess(img: &GrayImage) -> GrayImage {
     let mut processed = img.clone();
 
-    // Binary threshold at 128
+    // Binary threshold + invert: light text on dark background becomes
+    // dark text on white background, which Tesseract recognizes more reliably.
     for pixel in processed.pixels_mut() {
-        pixel.0[0] = if pixel.0[0] > 128 { 255 } else { 0 };
+        pixel.0[0] = if pixel.0[0] > 128 { 0 } else { 255 };
     }
 
     // Upscale 3x if text height is small
@@ -77,7 +78,7 @@ pub fn read_cs(lt: &mut LepTess, img: &GrayImage, debug: bool) -> Option<i64> {
         );
     }
 
-    let result = if confidence < 50 || trimmed.is_empty() {
+    let result = if confidence < 10 || trimmed.is_empty() {
         None
     } else {
         trimmed.parse::<i64>().ok()
