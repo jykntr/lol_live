@@ -30,8 +30,7 @@ pub fn crop_cs_region(img: &RgbaImage, region: &CsRegion) -> GrayImage {
     let cropped =
         image::imageops::crop_imm(img, region.x, region.y, region.width, region.height).to_image();
 
-    let gray = image::DynamicImage::ImageRgba8(cropped).into_luma8();
-    gray
+    image::DynamicImage::ImageRgba8(cropped).into_luma8()
 }
 
 /// Save a full screenshot to the given path, drawing a bright rectangle around the CS region.

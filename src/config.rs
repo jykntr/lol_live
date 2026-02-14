@@ -43,8 +43,8 @@ fn config_path() -> Option<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        use winreg::enums::HKEY_LOCAL_MACHINE;
         use winreg::RegKey;
+        use winreg::enums::HKEY_LOCAL_MACHINE;
 
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
         let subkey = hklm
@@ -91,10 +91,10 @@ pub fn load(override_path: Option<&PathBuf>) -> LeagueConfig {
 
         match current_section.as_str() {
             "HUD" => {
-                if key == "GlobalScale" {
-                    if let Ok(v) = value.parse::<f64>() {
-                        config.hud_scale = v;
-                    }
+                if key == "GlobalScale"
+                    && let Ok(v) = value.parse::<f64>()
+                {
+                    config.hud_scale = v;
                 }
             }
             "General" => match key {

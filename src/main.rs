@@ -155,27 +155,28 @@ async fn main() {
                                     let _ = ocr_tx.send(Some(cs_val));
 
                                     // Record: save on first successful parse of a new CS value
-                                    if let Some(ref dir) = record_dir {
-                                        if last_recorded_cs.is_none()
-                                            || cs_val > last_recorded_cs.unwrap()
-                                        {
-                                            let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_cs_{cs_val}.png"));
-                                            if let Err(e) = img.save(&path) {
-                                                eprintln!(
-                                                    "[record] Failed to save {}: {e}",
-                                                    path.display()
-                                                );
-                                            } else {
-                                                eprintln!("[record] Saved {}", path.display());
-                                            }
-                                            last_recorded_cs = Some(cs_val);
+                                    if let Some(ref dir) = record_dir
+                                        && (last_recorded_cs.is_none()
+                                            || cs_val > last_recorded_cs.unwrap())
+                                    {
+                                        let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_cs_{cs_val}.png"));
+                                        if let Err(e) = img.save(&path) {
+                                            eprintln!(
+                                                "[record] Failed to save {}: {e}",
+                                                path.display()
+                                            );
+                                        } else {
+                                            eprintln!("[record] Saved {}", path.display());
                                         }
+                                        last_recorded_cs = Some(cs_val);
                                     }
                                 }
                                 last_ocr_ok = true;
                             } else {
                                 if debug && last_ocr_ok && screenshot_index < DEBUG_SCREENSHOT_MAX {
-                                    let base = format!("debug_screenshot_res_{screen_w}x{screen_h}_wm_{window_mode}_{screenshot_index}");
+                                    let base = format!(
+                                        "debug_screenshot_res_{screen_w}x{screen_h}_wm_{window_mode}_{screenshot_index}"
+                                    );
                                     let annotated = format!("{base}.png");
                                     capture::save_screenshot(&img, &annotated, &region);
                                     eprintln!("[OCR] Saved screenshot to {annotated}");
@@ -191,19 +192,19 @@ async fn main() {
                                 }
 
                                 // Record: save on first failure after a success
-                                if let Some(ref dir) = record_dir {
-                                    if last_ocr_ok {
-                                        let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_fail_{record_fail_index}.png"));
-                                        if let Err(e) = img.save(&path) {
-                                            eprintln!(
-                                                "[record] Failed to save {}: {e}",
-                                                path.display()
-                                            );
-                                        } else {
-                                            eprintln!("[record] Saved {}", path.display());
-                                        }
-                                        record_fail_index += 1;
+                                if let Some(ref dir) = record_dir
+                                    && last_ocr_ok
+                                {
+                                    let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_fail_{record_fail_index}.png"));
+                                    if let Err(e) = img.save(&path) {
+                                        eprintln!(
+                                            "[record] Failed to save {}: {e}",
+                                            path.display()
+                                        );
+                                    } else {
+                                        eprintln!("[record] Saved {}", path.display());
                                     }
+                                    record_fail_index += 1;
                                 }
 
                                 last_ocr_ok = false;
