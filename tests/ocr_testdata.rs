@@ -43,6 +43,9 @@ fn test_ocr_against_testdata() {
 
         let region = detect::detect_cs_region(screen_w, screen_h, 1.0);
 
+        let mut dir_total = 0;
+        let mut dir_passed = 0;
+
         for img_entry in std::fs::read_dir(entry.path()).expect("Failed to read image directory") {
             let img_entry = img_entry.expect("Failed to read image entry");
             let img_path = img_entry.path();
@@ -72,8 +75,10 @@ fn test_ocr_against_testdata() {
             let actual_cs = ocr::read_cs(&mut lt, &gray, false);
 
             total += 1;
+            dir_total += 1;
             if actual_cs == Some(expected_cs) {
                 passed += 1;
+                dir_passed += 1;
             } else {
                 let msg = format!(
                     "{dir_name}/{}: expected {expected_cs}, got {:?}",
@@ -84,9 +89,17 @@ fn test_ocr_against_testdata() {
                 failures.push(msg);
             }
         }
+
+        eprintln!("{dir_name}: {dir_passed}/{dir_total} passed");
     }
 
-    eprintln!("\nOCR test results: {passed}/{total} passed");
+    eprintln!(
+        "\nOCR test results: {passed}/{total} passed (across {} directories)",
+        std::fs::read_dir(&testdata_dir)
+            .unwrap()
+            .filter(|e| e.as_ref().unwrap().file_type().unwrap().is_dir())
+            .count()
+    );
 
     if !failures.is_empty() {
         panic!(
