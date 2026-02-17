@@ -225,6 +225,7 @@ async fn main() {
     // Display loop (500ms)
     let display_handle = tokio::spawn(async move {
         let mut last_cs = -1i64;
+        let mut last_print = tokio::time::Instant::now();
 
         loop {
             let api_data = api_rx.borrow().clone();
@@ -238,8 +239,12 @@ async fn main() {
                         _ => (data.cs, "API"),
                     };
 
-                    if cs > last_cs {
+                    let cs_changed = cs > last_cs;
+                    let elapsed = last_print.elapsed() >= Duration::from_secs(10);
+
+                    if cs_changed || elapsed {
                         last_cs = cs;
+                        last_print = tokio::time::Instant::now();
                         let minutes = data.game_time / 60.0;
                         let cs_per_minute = if minutes > 0.0 {
                             cs as f64 / minutes
