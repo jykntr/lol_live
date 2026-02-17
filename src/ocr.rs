@@ -26,6 +26,8 @@ pub fn init_tesseract() -> Option<LepTess> {
     let mut lt = LepTess::new(Some(tessdata_dir.to_str()?), "eng").ok()?;
     let _ = lt.set_variable(Variable::TesseditCharWhitelist, "0123456789");
     let _ = lt.set_variable(Variable::TesseditPagesegMode, "7");
+    let null_device = if cfg!(windows) { "NUL" } else { "/dev/null" };
+    let _ = lt.set_variable(Variable::DebugFile, null_device);
     Some(lt)
 }
 
