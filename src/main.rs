@@ -44,18 +44,6 @@ async fn main() {
     let (api_tx, api_rx) = watch::channel::<Option<ApiData>>(None);
     let (ocr_tx, ocr_rx) = watch::channel::<Option<i64>>(None);
 
-    // Try to init OCR
-    let ocr_available = match ocr::init_tesseract() {
-        Some(_) => {
-            eprintln!("[OCR] Tesseract initialized successfully");
-            true
-        }
-        None => {
-            eprintln!("[OCR] Tesseract not available, running in API-only mode");
-            false
-        }
-    };
-
     // API loop (3s)
     let api_handle = tokio::spawn(async move {
         loop {
@@ -67,7 +55,8 @@ async fn main() {
 
     // OCR loop (1s) - only if Tesseract is available
     let ocr_api_rx = api_rx.clone();
-    let ocr_handle = if ocr_available {
+    let ocr_handle = if ocr::init_tesseract().is_some() {
+        eprintln!("[OCR] Tesseract initialized successfully");
         Some(tokio::task::spawn_blocking(move || {
             let mut lt = match ocr::init_tesseract() {
                 Some(lt) => lt,
@@ -121,6 +110,14 @@ async fn main() {
                 let mut last_recorded_cs: Option<i64> = None;
                 let mut record_fail_index: u64 = 0;
 
+                let save_record = |result: Result<(), _>, path: &std::path::Path| {
+                    if let Err(e) = result {
+                        eprintln!("[record] Failed to save {}: {e}", path.display());
+                    } else {
+                        eprintln!("[record] Saved {}", path.display());
+                    }
+                };
+
                 // Capture loop — runs while game is active
                 loop {
                     // Check if game ended or not yet started (gameTime <= 0)
@@ -150,14 +147,7 @@ async fn main() {
                                         let path = dir.join(format!(
                                             "record_res_{screen_w}x{screen_h}_cs_{cs_val}.png"
                                         ));
-                                        if let Err(e) = img.save(&path) {
-                                            eprintln!(
-                                                "[record] Failed to save {}: {e}",
-                                                path.display()
-                                            );
-                                        } else {
-                                            eprintln!("[record] Saved {}", path.display());
-                                        }
+                                        save_record(img.save(&path), &path);
                                         last_recorded_cs = Some(cs_val);
                                     }
                                 }
@@ -186,14 +176,7 @@ async fn main() {
                                     && last_ocr_ok
                                 {
                                     let path = dir.join(format!("record_res_{screen_w}x{screen_h}_fail_{record_fail_index}.png"));
-                                    if let Err(e) = img.save(&path) {
-                                        eprintln!(
-                                            "[record] Failed to save {}: {e}",
-                                            path.display()
-                                        );
-                                    } else {
-                                        eprintln!("[record] Saved {}", path.display());
-                                    }
+                                    save_record(img.save(&path), &path);
                                     record_fail_index += 1;
                                 }
 
@@ -209,6 +192,7 @@ async fn main() {
             }
         }))
     } else {
+        eprintln!("[OCR] Tesseract not available, running in API-only mode");
         None
     };
 
@@ -216,6 +200,7 @@ async fn main() {
     let display_handle = tokio::spawn(async move {
         let mut last_cs = -1i64;
         let mut last_print = tokio::time::Instant::now();
+        let mut no_game_printed = false;
 
         loop {
             let api_data = api_rx.borrow().clone();
@@ -249,16 +234,10 @@ async fn main() {
                     }
                 }
                 None => {
-                    if last_cs != -1 {
-                        last_cs = -1;
+                    if last_cs != -1 || !no_game_printed {
                         println!("No live game detected...");
-                    } else {
-                        // Only print once when no game is running
-                        static PRINTED: std::sync::atomic::AtomicBool =
-                            std::sync::atomic::AtomicBool::new(false);
-                        if !PRINTED.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                            println!("No live game detected...");
-                        }
+                        no_game_printed = true;
+                        last_cs = -1;
                     }
                 }
             }
