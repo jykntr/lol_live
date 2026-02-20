@@ -110,14 +110,6 @@ async fn main() {
                 let mut last_recorded_cs: Option<i64> = None;
                 let mut record_fail_index: u64 = 0;
 
-                let save_record = |result: Result<(), _>, path: &std::path::Path| {
-                    if let Err(e) = result {
-                        eprintln!("[record] Failed to save {}: {e}", path.display());
-                    } else {
-                        eprintln!("[record] Saved {}", path.display());
-                    }
-                };
-
                 // Capture loop — runs while game is active
                 loop {
                     // Check if game ended or not yet started (gameTime <= 0)
@@ -127,6 +119,7 @@ async fn main() {
                         .is_some_and(|d| d.game_time > 0.0)
                     {
                         eprintln!("[OCR] Game ended or not active, pausing OCR captures");
+                        let _ = ocr_tx.send(None);
                         game_active = false;
                         break;
                     }
@@ -252,4 +245,12 @@ async fn main() {
         let _ = h.await;
     }
     let _ = display_handle.await;
+}
+
+fn save_record(result: Result<(), impl std::fmt::Display>, path: &std::path::Path) {
+    if let Err(e) = result {
+        eprintln!("[record] Failed to save {}: {e}", path.display());
+    } else {
+        eprintln!("[record] Saved {}", path.display());
+    }
 }
