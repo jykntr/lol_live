@@ -1,5 +1,5 @@
 use clap::Parser;
-use lol_live::{api, capture, config, detect, ocr, types};
+use lol_live::{api, capture, detect, ocr, types};
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::watch;
@@ -15,10 +15,6 @@ struct Args {
     /// Record screenshots for building an OCR test suite, optionally to a directory
     #[arg(long, num_args = 0..=1, default_missing_value = ".")]
     record: Option<PathBuf>,
-
-    /// Path to League of Legends game.cfg config file
-    #[arg(short = 'c', long = "game-config")]
-    game_config: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -47,14 +43,6 @@ async fn main() {
     // Channels
     let (api_tx, api_rx) = watch::channel::<Option<ApiData>>(None);
     let (ocr_tx, ocr_rx) = watch::channel::<Option<i64>>(None);
-
-    // Load League config (HUD scale, resolution, etc.)
-    let league_config = config::load(args.game_config.as_ref());
-    if debug {
-        eprintln!("[OCR] League config: {league_config}");
-    }
-    let hud_scale = league_config.hud_scale;
-    let window_mode = league_config.window_mode;
 
     // Try to init OCR
     let ocr_available = match ocr::init_tesseract() {
@@ -119,7 +107,7 @@ async fn main() {
                     }
                 };
 
-                let region = detect::detect_cs_region(screen_w, screen_h, hud_scale);
+                let region = detect::detect_cs_region(screen_w, screen_h);
                 eprintln!(
                     "[OCR] CS region: x={}, y={}, w={}, h={}",
                     region.x, region.y, region.width, region.height
@@ -159,7 +147,9 @@ async fn main() {
                                         && (last_recorded_cs.is_none()
                                             || cs_val > last_recorded_cs.unwrap())
                                     {
-                                        let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_cs_{cs_val}.png"));
+                                        let path = dir.join(format!(
+                                            "record_res_{screen_w}x{screen_h}_cs_{cs_val}.png"
+                                        ));
                                         if let Err(e) = img.save(&path) {
                                             eprintln!(
                                                 "[record] Failed to save {}: {e}",
@@ -175,7 +165,7 @@ async fn main() {
                             } else {
                                 if debug && last_ocr_ok && screenshot_index < DEBUG_SCREENSHOT_MAX {
                                     let base = format!(
-                                        "debug_screenshot_res_{screen_w}x{screen_h}_wm_{window_mode}_{screenshot_index}"
+                                        "debug_screenshot_res_{screen_w}x{screen_h}_{screenshot_index}"
                                     );
                                     let annotated = format!("{base}.png");
                                     capture::save_screenshot(&img, &annotated, &region);
@@ -195,7 +185,7 @@ async fn main() {
                                 if let Some(ref dir) = record_dir
                                     && last_ocr_ok
                                 {
-                                    let path = dir.join(format!("record_res_{screen_w}x{screen_h}_wm_{window_mode}_fail_{record_fail_index}.png"));
+                                    let path = dir.join(format!("record_res_{screen_w}x{screen_h}_fail_{record_fail_index}.png"));
                                     if let Err(e) = img.save(&path) {
                                         eprintln!(
                                             "[record] Failed to save {}: {e}",

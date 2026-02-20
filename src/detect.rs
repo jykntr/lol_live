@@ -7,7 +7,7 @@ use crate::types::CsRegion;
 /// CS
 /// number text starts roughly 143 pixels from the right edge at y=3.
 /// The region is sized to capture up to 3-digit CS values.
-pub fn detect_cs_region(screen_width: u32, screen_height: u32, _hud_scale: f64) -> CsRegion {
+pub fn detect_cs_region(screen_width: u32, screen_height: u32) -> CsRegion {
     let base_width: f64 = 1920.0;
     let base_height: f64 = 1080.0;
 

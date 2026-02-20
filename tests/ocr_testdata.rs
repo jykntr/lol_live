@@ -3,13 +3,11 @@ use std::path::Path;
 use image::ImageReader;
 use lol_live::{capture, detect, ocr};
 
-/// Parse a testdata directory name like "res_2560x1440_wm_0" into (width, height, window_mode).
-fn parse_dir_name(name: &str) -> Option<(u32, u32, u32)> {
-    // Expected format: res_WWWWxHHHH_wm_Y
+/// Parse a testdata directory name like "res_2560x1440" into (width, height).
+fn parse_dir_name(name: &str) -> Option<(u32, u32)> {
     let rest = name.strip_prefix("res_")?;
-    let (res_part, wm_part) = rest.split_once("_wm_")?;
-    let (w, h) = res_part.split_once('x')?;
-    Some((w.parse().ok()?, h.parse().ok()?, wm_part.parse().ok()?))
+    let (w, h) = rest.split_once('x')?;
+    Some((w.parse().ok()?, h.parse().ok()?))
 }
 
 fn run_ocr_test(dir_name: &str) {
@@ -21,10 +19,10 @@ fn run_ocr_test(dir_name: &str) {
         return;
     }
 
-    let (screen_w, screen_h, _wm) =
+    let (screen_w, screen_h) =
         parse_dir_name(dir_name).unwrap_or_else(|| panic!("Bad directory name: {dir_name}"));
 
-    let region = detect::detect_cs_region(screen_w, screen_h, 1.0);
+    let region = detect::detect_cs_region(screen_w, screen_h);
     let mut lt = ocr::init_tesseract().expect("Failed to initialize Tesseract");
 
     let mut total = 0;
@@ -85,11 +83,11 @@ fn run_ocr_test(dir_name: &str) {
 }
 
 #[test]
-fn test_ocr_res_2560x1440_wm_0() {
-    run_ocr_test("res_2560x1440_wm_0");
+fn test_ocr_res_2560x1440() {
+    run_ocr_test("res_2560x1440");
 }
 
 #[test]
-fn test_ocr_res_3840x2160_wm_1() {
-    run_ocr_test("res_3840x2160_wm_1");
+fn test_ocr_res_3840x2160() {
+    run_ocr_test("res_3840x2160");
 }
