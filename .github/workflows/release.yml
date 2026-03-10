@@ -28,10 +28,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}/installed
+          key: vcpkg-x64-windows-static-md-${{ hashFiles('vcpkg.json') }}
+
+      - name: Install vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          vcpkg install --classic leptonica:x64-windows-static-md tesseract:x64-windows-static-md
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
+
+      - name: Install dependencies
+        uses: ./.github/actions/setup-deps
 
       - name: Rust cache setup
         uses: Swatinem/rust-cache@v2

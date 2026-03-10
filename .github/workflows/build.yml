@@ -13,6 +13,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        uses: ./.github/actions/setup-deps
+
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -28,6 +31,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install dependencies
+        uses: ./.github/actions/setup-deps
 
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -63,6 +69,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        uses: ./.github/actions/setup-deps
+
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -86,17 +95,34 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: macos-latest
-            target: x86_64-apple-darwin
+    #          - os: macos-latest
+    #            target: x86_64-apple-darwin
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}/installed
+          key: vcpkg-x64-windows-static-md-${{ hashFiles('vcpkg.json') }}
+
+      - name: Install vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          vcpkg install --classic leptonica:x64-windows-static-md tesseract:x64-windows-static-md
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
+
+      - name: Install dependencies
+        uses: ./.github/actions/setup-deps
 
       - name: Rust cache setup
         uses: Swatinem/rust-cache@v2
@@ -104,3 +130,9 @@ jobs:
       - name: Build
         shell: bash
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lol_live-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/lol_live${{ contains(matrix.target, 'windows') && '.exe' || '' }}
