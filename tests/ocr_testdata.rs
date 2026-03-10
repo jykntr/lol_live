@@ -88,6 +88,11 @@ fn test_ocr_res_2560x1440() {
 }
 
 #[test]
+fn test_ocr_res_2560x1600() {
+    run_ocr_test("res_2560x1600");
+}
+
+#[test]
 fn test_ocr_res_3840x2160() {
     run_ocr_test("res_3840x2160");
 }

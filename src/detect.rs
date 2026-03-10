@@ -8,16 +8,19 @@ use crate::types::CsRegion;
 /// number text starts roughly 143 pixels from the right edge at y=3.
 /// The region is sized to capture up to 3-digit CS values.
 pub fn detect_cs_region(screen_width: u32, screen_height: u32) -> CsRegion {
-    let base_width: f64 = 1920.0;
     let base_height: f64 = 1080.0;
 
-    let scale_x = screen_width as f64 / base_width;
-    let scale_y = screen_height as f64 / base_height;
+    // League's scoreboard scales uniformly based on screen height, not
+    // independently per axis.  For 16:9 resolutions the two scale factors
+    // are identical, but for non-16:9 (e.g. 16:10 at 2560×1600) using a
+    // single height-derived scale keeps the crop aligned with the actual
+    // glyph positions.
+    let scale = screen_height as f64 / base_height;
 
-    let x = screen_width as f64 - (143.0 * scale_x);
-    let y = 3.0 * scale_y;
-    let width = 50.0 * scale_x;
-    let height = 20.0 * scale_y;
+    let x = screen_width as f64 - (143.0 * scale);
+    let y = 3.0 * scale;
+    let width = 50.0 * scale;
+    let height = 20.0 * scale;
 
     CsRegion {
         x: x as u32,
